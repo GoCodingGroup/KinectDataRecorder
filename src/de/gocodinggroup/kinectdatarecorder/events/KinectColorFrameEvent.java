@@ -7,7 +7,7 @@ public class KinectColorFrameEvent extends KinectFrameEvent {
 	private static final int COLOR_FRAME_WIDTH = 1920;
 	private static final int COLOR_FRAME_HEIGHT = 1080;
 	private static final int COLOR_FRAME_BYTES_PER_PIXEL = Byte.BYTES * 4;
-	private static final int COLOR_BUFFER_SIZE = COLOR_HEADER_SIZE
+	public static final int COLOR_BUFFER_SIZE = COLOR_HEADER_SIZE
 			+ COLOR_FRAME_WIDTH * COLOR_FRAME_HEIGHT * COLOR_FRAME_BYTES_PER_PIXEL;
 
 	/** color frame data */

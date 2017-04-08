@@ -7,9 +7,9 @@ import java.nio.channels.*;
 import de.gocodinggroup.kinectdatarecorder.events.*;
 import de.gocodinggroup.util.*;
 
-public class KinectColorPlaybacker extends KinectPlaybacker {
+public class KinectDepthPlaybacker extends KinectPlaybacker {
 	/** The fileInputStream for color files */
-	private final FileChannel colorIn;
+	private final FileChannel depthIn;
 
 	/** The file we read from */
 	private final RandomAccessFile file;
@@ -20,12 +20,12 @@ public class KinectColorPlaybacker extends KinectPlaybacker {
 	/** Whether or not we should stop playback */
 	private boolean shouldStop = false;
 
-	public KinectColorPlaybacker(File colorFile) throws FileNotFoundException {
-		this.file = new RandomAccessFile(colorFile, "r");
-		this.colorIn = this.file.getChannel();
+	public KinectDepthPlaybacker(File depthFile) throws FileNotFoundException {
+		this.file = new RandomAccessFile(depthFile, "r");
+		this.depthIn = this.file.getChannel();
 
 		// TODO refactor using constants/file header information
-		this.inputBuffer = ByteBuffer.allocate(KinectColorFrameEvent.COLOR_BUFFER_SIZE);
+		this.inputBuffer = ByteBuffer.allocateDirect(KinectDepthFrameEvent.DEPTH_BUFFER_SIZE);
 	}
 
 	@Override
@@ -33,33 +33,37 @@ public class KinectColorPlaybacker extends KinectPlaybacker {
 		while (!this.shouldStop) {
 			try {
 				// reset color in to start from the beginning
-				this.colorIn.position(0);
+				this.depthIn.position(0);
 				long previousTimestamp = -1;
-				while (!this.shouldStop && this.colorIn.read(this.inputBuffer) > 0) {
+				while (!this.shouldStop && this.depthIn.read(this.inputBuffer) > 0) {
+					// This is for delta calculation. We have to account for
+					// execution time, otherwise our frames are sent out to slow
 					long before = System.currentTimeMillis();
 
-					// Prepare Buffer for reading
+					// flip input buffer to make it readable
 					this.inputBuffer.flip();
 
 					// Craft Kinect color Frame from Data
-					KinectColorFrameEvent frameEvent = new KinectColorFrameEvent(this.inputBuffer);
+					KinectDepthFrameEvent frameEvent = new KinectDepthFrameEvent(this.inputBuffer);
+					// System.out.println("delta: " + (System.nanoTime() - before));
 					long currentTimestamp = frameEvent.getTimestamp();
 					if (previousTimestamp == -1) previousTimestamp = currentTimestamp;
 
-					// Dispatch event
-					EventManager.dispatchAndWait(frameEvent);
-
 					long timeTaken = System.currentTimeMillis() - before;
 					long sleepTime = currentTimestamp - previousTimestamp - timeTaken;
+
 					// Limit fps (sleep until timestamp delta is reached)
 					if (sleepTime > 0) Thread.sleep(sleepTime);
 					previousTimestamp = currentTimestamp;
+
+					// Dispatch event
+					EventManager.dispatchAndWait(frameEvent);
 
 					// clear buffer
 					this.inputBuffer.clear();
 				}
 			} catch (IOException e) {
-				System.err.println("ERROR reading from color file");
+				System.err.println("ERROR reading from depth file");
 				e.printStackTrace();
 			} catch (InterruptedException e) {
 				// break from this loop
@@ -68,10 +72,10 @@ public class KinectColorPlaybacker extends KinectPlaybacker {
 		}
 
 		try {
-			this.colorIn.close();
+			this.depthIn.close();
 			this.file.close();
 		} catch (IOException e) {
-			System.out.println("ERROR closing color playback resources");
+			System.out.println("ERROR closing depth playback resources");
 			e.printStackTrace();
 		}
 	}
