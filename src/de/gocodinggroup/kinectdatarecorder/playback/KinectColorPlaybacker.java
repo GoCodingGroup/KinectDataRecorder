@@ -17,16 +17,12 @@ public class KinectColorPlaybacker extends KinectPlaybacker {
 	/** The input buffer */
 	private final ByteBuffer inputBuffer;
 
-	/** The amount of FPS desired during playback */
-	private final double desiredFPS;
-
 	/** Whether or not we should stop playback */
 	private boolean shouldStop = false;
 
-	public KinectColorPlaybacker(File colorFile, int desiredFPS) throws FileNotFoundException {
+	public KinectColorPlaybacker(File colorFile) throws FileNotFoundException {
 		this.file = new RandomAccessFile(colorFile, "r");
 		this.colorIn = this.file.getChannel();
-		this.desiredFPS = desiredFPS;
 
 		// TODO refactor using constants/file header information
 		this.inputBuffer = ByteBuffer.allocate(1920 * 1080 * 4 + 3 * Integer.BYTES + 1 * Long.BYTES);
@@ -36,32 +32,28 @@ public class KinectColorPlaybacker extends KinectPlaybacker {
 	public void run() {
 		while (!this.shouldStop) {
 			try {
-				long lastTime = System.currentTimeMillis();
-				double ns = 1000 / desiredFPS;
-				long sleepTime = 0;
-
+				// reset color in to start from the beginning
+				this.colorIn.position(0);
+				long previousTimestamp = -1;
 				while (!this.shouldStop && this.colorIn.read(this.inputBuffer) > 0) {
 					// Prepare Buffer for reading
 					this.inputBuffer.flip();
 
 					// Craft Kinect color Frame from Data
 					KinectColorFrameEvent frameEvent = new KinectColorFrameEvent(this.inputBuffer);
+					long currentTimestamp = frameEvent.getTimestamp();
+					if (previousTimestamp == -1) previousTimestamp = currentTimestamp;
+
+					// Limit fps (sleep until timestamp delta is reached)
+					Thread.sleep(currentTimestamp - previousTimestamp);
+					previousTimestamp = currentTimestamp;
 
 					// Dispatch event
 					EventManager.dispatchAndWait(frameEvent);
 
 					// clear buffer
 					this.inputBuffer.clear();
-
-					// Limit fps
-					long now = System.currentTimeMillis();
-					sleepTime = (long) (ns - (now - lastTime));
-					lastTime = now;
-					if (sleepTime > 0) Thread.sleep(sleepTime);
 				}
-
-				// reset color in to start from the beginning
-				this.colorIn.position(0);
 			} catch (IOException e) {
 				System.err.println("ERROR reading from color file");
 				e.printStackTrace();

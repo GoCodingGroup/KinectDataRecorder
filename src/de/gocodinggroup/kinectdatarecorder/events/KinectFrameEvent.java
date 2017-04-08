@@ -23,6 +23,10 @@ public abstract class KinectFrameEvent extends Event {
 		this.timestamp = timestamp;
 	}
 
+	protected void setTimestamp(long timestamp) {
+		this.timestamp = timestamp;
+	}
+
 	/**
 	 * Retrieve timestamp at which this frame occured
 	 * 

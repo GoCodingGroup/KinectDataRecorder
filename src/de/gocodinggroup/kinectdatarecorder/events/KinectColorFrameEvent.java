@@ -31,7 +31,7 @@ public class KinectColorFrameEvent extends KinectFrameEvent {
 		compressedData.getInt();
 		compressedData.getInt();
 		compressedData.getInt();
-		compressedData.getLong();
+		this.setTimestamp(compressedData.getLong());
 		compressedData.get(this.data);
 	}
 

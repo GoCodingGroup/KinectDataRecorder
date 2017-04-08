@@ -33,7 +33,6 @@ public class KinectRecorder {
 			if (this.maxFrames <= 0) return;
 			try {
 				this.maxFrames--;
-				System.out.println(this.maxFrames);
 				if (this.maxFrames <= 0) {
 					this.end();
 					System.out.println("Finished writing to: " + this.stream);
