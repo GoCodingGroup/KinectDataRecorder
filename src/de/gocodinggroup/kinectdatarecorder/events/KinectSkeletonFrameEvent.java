@@ -1,5 +1,7 @@
 package de.gocodinggroup.kinectdatarecorder.events;
 
+import java.nio.*;
+
 /**
  * Skeleton Frame event representation
  * 
@@ -7,6 +9,16 @@ package de.gocodinggroup.kinectdatarecorder.events;
  * @created 23.09.2016
  */
 public class KinectSkeletonFrameEvent extends KinectFrameEvent {
+	// private static final int DEPTH_FRAME_WIDTH = 512;
+	// private static final int DEPTH_FRAME_HEIGHT = 424;
+	// private static final int DEPTH_FRAME_HEADER_SIZE = 1 * Long.BYTES + 3 +
+	// Integer.BYTES;
+	// private static final int DEPTH_BUFFER_SIZE = DEPTH_FRAME_HEADER_SIZE
+	// + DEPTH_FRAME_WIDTH * DEPTH_FRAME_HEIGHT * Byte.BYTES + DEPTH_FRAME_WIDTH
+	// * DEPTH_FRAME_HEIGHT * Short.BYTES
+	// + DEPTH_FRAME_WIDTH * DEPTH_FRAME_HEIGHT * 3 * Float.BYTES;
+	// TODO find out skeleton frame event size and figure out a format to use
+
 	/** skeleton frame event */
 	private boolean[] flags;
 	private float[] positions;
@@ -44,5 +56,11 @@ public class KinectSkeletonFrameEvent extends KinectFrameEvent {
 
 	public byte[] getState() {
 		return state;
+	}
+
+	@Override
+	public ByteBuffer getCompressedData() {
+		// TODO: implement
+		return null;
 	}
 }

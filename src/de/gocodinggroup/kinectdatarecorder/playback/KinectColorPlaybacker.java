@@ -29,7 +29,7 @@ public class KinectColorPlaybacker extends KinectPlaybacker {
 		this.desiredFPS = desiredFPS;
 
 		// TODO refactor using constants/file header information
-		this.inputBuffer = ByteBuffer.allocate(1920 * 1080 * 4);
+		this.inputBuffer = ByteBuffer.allocate(1920 * 1080 * 4 + 3 * Integer.BYTES + 1 * Long.BYTES);
 	}
 
 	@Override
@@ -45,7 +45,7 @@ public class KinectColorPlaybacker extends KinectPlaybacker {
 					this.inputBuffer.flip();
 
 					// Craft Kinect color Frame from Data
-					KinectColorFrameEvent frameEvent = new KinectColorFrameEvent(this.inputBuffer.array());
+					KinectColorFrameEvent frameEvent = new KinectColorFrameEvent(this.inputBuffer);
 
 					// Dispatch event
 					EventManager.dispatchAndWait(frameEvent);

@@ -1,7 +1,6 @@
 package de.gocodinggroup.kinectdatarecorder.record;
 
 import java.io.*;
-import java.nio.*;
 
 import de.gocodinggroup.kinectdatarecorder.events.*;
 import de.gocodinggroup.util.*;
@@ -15,115 +14,59 @@ import de.gocodinggroup.util.*;
  *
  */
 public class KinectRecorder {
-	/** The color file stream */
-	private final FileOutputStream colorStream;
-
-	/** The depth file stream */
-	private final FileOutputStream depthStream;
-
-	/** The skeleton file stream */
-	private final FileOutputStream skeletonStream;
-
-	/** Buffers for the data */
-	private final ByteBuffer colorBuffer;
-	private final ByteBuffer depthBuffer;
-	private final ByteBuffer skeletonBuffer;
-
 	/** Listeners for writing data on FrameEvents */
-	private final EventListener colorListener;
-	private final EventListener depthListener;
-	private final EventListener skeletonListener;
+	private StreamWriter colorListener;
+	private StreamWriter depthListener;
+	private StreamWriter skeletonListener;
 
-	/** Maximum amount of frames to capture */
-	private int frames;
+	private class StreamWriter implements EventListener {
+		private FileOutputStream stream;
+		private int maxFrames;
 
-	/**
-	 * Creates a new KinectRecorder that can record color information
-	 * 
-	 * @param colorFile
-	 * @throws FileNotFoundException
-	 */
-	public KinectRecorder(File colorFile) throws FileNotFoundException {
-		this.colorStream = new FileOutputStream(colorFile);
-		this.depthStream = null;
-		this.skeletonStream = null;
+		public StreamWriter(int maxFrames, File f) throws FileNotFoundException {
+			this.stream = new FileOutputStream(f);
+			this.maxFrames = maxFrames;
+		}
 
-		this.colorBuffer = ByteBuffer.allocateDirect(1920 * 1080 * 4);
-		this.depthBuffer = null;
-		this.skeletonBuffer = null;
-
-		this.colorListener = new EventListener() {
-			@Override
-			public void eventReceived(Event event) {
-				try {
-					frames--;
-					if (frames <= 0) return;
-
-					colorBuffer.put(((KinectColorFrameEvent) event).getData());
-					colorBuffer.flip();
-					colorStream.getChannel().write(colorBuffer);
-					colorBuffer.clear();
-				} catch (IOException e) {
-					System.err.println("Writing color data failed!");
-					e.printStackTrace();
+		@Override
+		public void eventReceived(Event event) {
+			if (this.maxFrames <= 0) return;
+			try {
+				this.maxFrames--;
+				System.out.println(this.maxFrames);
+				if (this.maxFrames <= 0) {
+					this.end();
+					System.out.println("Finished writing to: " + this.stream);
+					return;
 				}
+				synchronized (this) {
+					this.stream.getChannel().write(((KinectFrameEvent) event).getCompressedData());
+				}
+			} catch (IOException e) {
+				System.err.println("Writing data failed!");
+				e.printStackTrace();
 			}
-		};
-		this.depthListener = null;
-		this.skeletonListener = null;
+		}
+
+		public void end() throws IOException {
+			this.maxFrames = 0;
+			synchronized (this) {
+				this.stream.flush();
+				this.stream.close();
+			}
+		}
 	}
 
-	/**
-	 * Creates a new KinectRecorder that can record depth and skeleton
-	 * information
-	 * 
-	 * @param depthFile
-	 * @param skeletonFile
-	 * @throws FileNotFoundException
-	 */
-	public KinectRecorder(File depthFile, File skeletonFile) throws FileNotFoundException {
-		this.colorStream = null;
-		this.depthStream = new FileOutputStream(depthFile);
-		this.skeletonStream = new FileOutputStream(skeletonFile);
+	public void recordDepthTo(int frames, File depthFile) throws FileNotFoundException {
+		this.depthListener = new StreamWriter(frames, depthFile);
+	}
 
-		this.colorBuffer = null;
-		this.depthBuffer = ByteBuffer.allocateDirect(-1); // TODO: find out
-																			// required capacity
-		this.skeletonBuffer = ByteBuffer.allocateDirect(-1); // TODO: find out
-																				// required capacity
+	public void recordColorTo(int frames, File colorFile) throws FileNotFoundException {
+		this.colorListener = new StreamWriter(frames, colorFile);
+	}
 
-		this.colorListener = null;
-		this.depthListener = new EventListener() {
-			@Override
-			public void eventReceived(Event event) {
-				try {
-					frames--;
-					if (frames <= 0) return;
-
-					depthBuffer.put(((KinectColorFrameEvent) event).getData());
-					depthBuffer.flip();
-					depthStream.getChannel().write(depthBuffer);
-					depthBuffer.clear();
-				} catch (IOException e) {
-					System.err.println("Writing depth data failed!");
-					e.printStackTrace();
-				}
-			}
-		};
-		this.skeletonListener = new EventListener() {
-			@Override
-			public void eventReceived(Event event) {
-				try {
-					skeletonBuffer.put(((KinectColorFrameEvent) event).getData());
-					skeletonBuffer.flip();
-					skeletonStream.getChannel().write(skeletonBuffer);
-					skeletonBuffer.clear();
-				} catch (IOException e) {
-					System.err.println("Writing skeleton data failed!");
-					e.printStackTrace();
-				}
-			}
-		};
+	public void recordSkeletonTo(int frames, File skeletonFile) throws FileNotFoundException {
+		this.skeletonListener = new StreamWriter(frames, skeletonFile);
 	}
 
 	/**
@@ -133,27 +76,34 @@ public class KinectRecorder {
 	 *           -1 if you want to record indefinitely, positive integer if you
 	 *           want to
 	 */
-	public void startRecord(int frames) {
-		this.frames = frames;
-
-		if (this.colorStream != null)
+	public void startRecord() {
+		if (this.colorListener != null)
 			EventManager.registerEventListenerForEvent(KinectColorFrameEvent.class, this.colorListener);
 
-		if (this.depthStream != null)
+		if (this.depthListener != null)
 			EventManager.registerEventListenerForEvent(KinectColorFrameEvent.class, this.depthListener);
 
-		if (this.skeletonStream != null)
+		if (this.skeletonListener != null)
 			EventManager.registerEventListenerForEvent(KinectColorFrameEvent.class, this.skeletonListener);
 	}
 
 	/**
 	 * Stops recording
+	 * 
+	 * @throws IOException
 	 */
-	public void stopRecord() {
+	public void stopRecord() throws IOException {
 		EventManager.removeEventListenerForEvent(KinectColorFrameEvent.class, this.colorListener);
 		EventManager.removeEventListenerForEvent(KinectColorFrameEvent.class, this.depthListener);
 		EventManager.removeEventListenerForEvent(KinectColorFrameEvent.class, this.skeletonListener);
 
-		System.out.println("Stopped recording"); // FIXME
+		if (this.colorListener != null) this.colorListener.end();
+		if (this.depthListener != null) this.depthListener.end();
+		if (this.skeletonListener != null) this.skeletonListener.end();
+
+		this.colorListener = null;
+		this.depthListener = null;
+		this.skeletonListener = null;
+		System.out.println("Stopped recording");
 	}
 }

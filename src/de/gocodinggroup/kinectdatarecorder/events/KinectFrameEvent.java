@@ -1,5 +1,6 @@
 package de.gocodinggroup.kinectdatarecorder.events;
 
+import java.nio.*;
 import java.util.*;
 
 import de.gocodinggroup.util.*;
@@ -30,4 +31,12 @@ public abstract class KinectFrameEvent extends Event {
 	public long getTimestamp() {
 		return timestamp;
 	}
+
+	/**
+	 * Compresses all this event's data into a single byte buffer (allows for
+	 * dynamic compression, and multithreading if needed)
+	 * 
+	 * @return
+	 */
+	public abstract ByteBuffer getCompressedData();
 }
