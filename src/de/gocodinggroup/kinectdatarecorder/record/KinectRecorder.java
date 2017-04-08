@@ -80,10 +80,10 @@ public class KinectRecorder {
 			EventManager.registerEventListenerForEvent(KinectColorFrameEvent.class, this.colorListener);
 
 		if (this.depthListener != null)
-			EventManager.registerEventListenerForEvent(KinectColorFrameEvent.class, this.depthListener);
+			EventManager.registerEventListenerForEvent(KinectDepthFrameEvent.class, this.depthListener);
 
 		if (this.skeletonListener != null)
-			EventManager.registerEventListenerForEvent(KinectColorFrameEvent.class, this.skeletonListener);
+			EventManager.registerEventListenerForEvent(KinectSkeletonFrameEvent.class, this.skeletonListener);
 	}
 
 	/**
